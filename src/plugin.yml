@@ -1,0 +1,8 @@
+name: ProtocolSupportAntiBot
+main: protocolsupportantibot.ProtocolSupportAntiBot
+version: 4.24
+author: _Shevchik_
+load: STARTUP
+depend: [ProtocolSupport, ProtocolLib, WorldEdit]
+commands:
+  protocolsupportantibot: {}
