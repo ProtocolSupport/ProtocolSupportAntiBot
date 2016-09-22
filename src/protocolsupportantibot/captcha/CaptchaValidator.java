@@ -114,7 +114,7 @@ public class CaptchaValidator implements Listener {
 		try {
 			if (!info.waitConfirm(Settings.captchaMaxWait, TimeUnit.SECONDS)) {
 				BanDataSource.getInstance().ban(event.getAddress().getAddress());
-				info.player.kickPlayer(Settings.captchaFailMessage);
+				event.denyLogin(Settings.captchaFailMessage);
 			} else {
 				if (info.isSuccess()) {
 					info.player.sendMessage(Settings.captchaSuccessMessage);
