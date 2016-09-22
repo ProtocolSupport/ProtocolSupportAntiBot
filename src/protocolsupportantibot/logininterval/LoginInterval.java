@@ -90,7 +90,10 @@ public class LoginInterval implements Listener {
 	public void onPlayerDisconnect(PlayerDisconnectEvent event) {
 		players.remove(event.getAddress());
 		synchronized (lock) {
-			queue.remove(event.getAddress());
+			CountDownLatch countdown = queue.remove(event.getAddress());
+			if (countdown != null) {
+				countdown.countDown();
+			}
 		}
 	}
 
