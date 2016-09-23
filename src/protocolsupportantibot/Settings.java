@@ -37,6 +37,7 @@ public class Settings {
 		captchaMaxTries = config.getInt("captcha.maxtries", captchaMaxTries);
 		tempBanTime = config.getLong("tempban.time", tempBanTime);
 		YamlConfiguration messages = YamlConfiguration.loadConfiguration(getMessagesConfigFile());
+		loginIntervalMessage = messages.getString("logininterval.start", loginIntervalMessage);
 		protocolValidatorStartMessage = messages.getString("protocolvalidator.start", protocolValidatorStartMessage);
 		protocolValidatorSuccessMessage = messages.getString("protocolvalidator.success", protocolValidatorSuccessMessage);
 		protocolValidatorFailMessage = messages.getString("protocolvalidator.fail", protocolValidatorFailMessage);
@@ -58,6 +59,7 @@ public class Settings {
 		config.set("captcha.maxtries", captchaMaxTries);
 		config.set("tempban.time", tempBanTime);
 		YamlConfiguration messages = new YamlConfiguration();
+		messages.set("logininterval.start", loginIntervalMessage);
 		messages.set("protocolvalidator.start", protocolValidatorStartMessage);
 		messages.set("protocolvalidator.success", protocolValidatorSuccessMessage);
 		messages.set("protocolvalidator.fail", protocolValidatorFailMessage);
