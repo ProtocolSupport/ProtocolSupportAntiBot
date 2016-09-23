@@ -63,7 +63,7 @@ public class LoginInterval implements Listener {
 		});
 	}
 
-	@EventHandler(priority = EventPriority.HIGHEST)
+	@EventHandler(priority = EventPriority.NORMAL)
 	public void onPlayerLoginEvent(PlayerLoginFinishEvent event) {
 		if (event.isLoginDenied()) {
 			return;
