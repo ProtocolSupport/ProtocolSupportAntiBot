@@ -106,8 +106,8 @@ public class CaptchaValidator implements Listener {
 
 		byte[] mapdata = toMinecraftMapData(generateCaptchaImage(info.generateCaptcha()));
 
-		ProtocolLibrary.getProtocolManager().sendServerPacket(info.player, Packets.createSetSlotPacket(36, new ItemStack(Material.MAP, 1, (short) 1)));
-		ProtocolLibrary.getProtocolManager().sendServerPacket(info.player, Packets.createMapDataPacket(1, mapdata));
+		ProtocolLibrary.getProtocolManager().sendServerPacket(info.player, Packets.createSetSlotPacket(36, new ItemStack(Material.MAP, 1, (short) 1)), false);
+		ProtocolLibrary.getProtocolManager().sendServerPacket(info.player, Packets.createMapDataPacket(1, mapdata), false);
 
 		info.player.sendMessage(Settings.captchaStartMessage);
 

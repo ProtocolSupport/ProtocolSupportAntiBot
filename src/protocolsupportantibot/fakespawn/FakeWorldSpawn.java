@@ -35,6 +35,7 @@ import protocolsupport.api.events.PlayerLoginFinishEvent;
 import protocolsupportantibot.ProtocolSupportAntiBot;
 import protocolsupportantibot.protocolvalidator.EntityIdPool;
 import protocolsupportantibot.utils.Packets;
+import protocolsupportantibot.utils.ProtocolLibPacketSender;
 
 /*
  * Spawns player in fake client side only world
@@ -73,10 +74,6 @@ public class FakeWorldSpawn implements Listener {
 			) {
 				@Override
 				public void onPacketSending(PacketEvent event) {
-					if (players.containsKey(event.getPlayer().getAddress())) {
-						return;
-					}
-
 					event.setCancelled(true);
 
 					int realDimId = event.getPacket().getIntegers().read(1);
@@ -85,10 +82,10 @@ public class FakeWorldSpawn implements Listener {
 					NativeGameMode realGameMode = event.getPacket().getGameModes().read(0);
 
 					try {
-						ProtocolLibrary.getProtocolManager().sendServerPacket(
+						ProtocolLibPacketSender.sendServerPacket(
 							event.getPlayer(), Packets.createRespawnPacket(realDimId == 0 ? -1 : 0, realDiff, realWType, realGameMode)
 						);
-						ProtocolLibrary.getProtocolManager().sendServerPacket(
+						ProtocolLibPacketSender.sendServerPacket(
 							event.getPlayer(), Packets.createRespawnPacket(realDimId, realDiff, realWType, realGameMode)
 						);
 					} catch (InvocationTargetException e) {
@@ -138,9 +135,9 @@ public class FakeWorldSpawn implements Listener {
 		int playerId = idPool.getId();
 		playerRealId.put(event.getAddress().getAddress(), playerId);
 
-		ProtocolLibrary.getProtocolManager().sendServerPacket(player, Packets.createJoinGamePacket(playerId, 60));
-		ProtocolLibrary.getProtocolManager().sendServerPacket(player, LobbySchematic.chunkdata != null ? LobbySchematic.chunkdata : Packets.createEmptyChunkPacket());
-		ProtocolLibrary.getProtocolManager().sendServerPacket(player, Packets.createTeleportPacket(8, LobbySchematic.chunkdata != null ? 6 : 1000, 8, 0, 33));
+		ProtocolLibPacketSender.sendServerPacket(player, Packets.createJoinGamePacket(playerId, 60));
+		ProtocolLibPacketSender.sendServerPacket(player, LobbySchematic.chunkdata != null ? LobbySchematic.chunkdata : Packets.createEmptyChunkPacket());
+		ProtocolLibPacketSender.sendServerPacket(player, Packets.createTeleportPacket(8, LobbySchematic.chunkdata != null ? 6 : 1000, 8, 0, 33));
 
 		players.remove(event.getAddress());
 	}

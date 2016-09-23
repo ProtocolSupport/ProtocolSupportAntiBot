@@ -9,6 +9,7 @@ import protocolsupportantibot.fakespawn.FakeWorldSpawn;
 import protocolsupportantibot.fakespawn.LobbySchematic;
 import protocolsupportantibot.logininterval.LoginInterval;
 import protocolsupportantibot.protocolvalidator.ClientProtocolValidator;
+import protocolsupportantibot.utils.ProtocolLibPacketSender;
 
 public class ProtocolSupportAntiBot extends JavaPlugin implements Listener {
 
@@ -24,15 +25,20 @@ public class ProtocolSupportAntiBot extends JavaPlugin implements Listener {
 
 	@Override
 	public void onEnable() {
-		Settings.load();
-		getCommand("protocolsupportantibot").setExecutor(new Commands());
-		saveResource(LobbySchematic.name, false);
-		LobbySchematic.load();
-		getServer().getPluginManager().registerEvents(new BanChecker(), this);
-		getServer().getPluginManager().registerEvents(new FakeWorldSpawn(), this);
-		getServer().getPluginManager().registerEvents(new ClientProtocolValidator(), this);
-		getServer().getPluginManager().registerEvents(new CaptchaValidator(), this);
-		getServer().getPluginManager().registerEvents(new LoginInterval(), this);
+		try {
+			ProtocolLibPacketSender.init();
+			Settings.load();
+			getCommand("protocolsupportantibot").setExecutor(new Commands());
+			saveResource(LobbySchematic.name, false);
+			LobbySchematic.load();
+			getServer().getPluginManager().registerEvents(new BanChecker(), this);
+			getServer().getPluginManager().registerEvents(new FakeWorldSpawn(), this);
+			getServer().getPluginManager().registerEvents(new ClientProtocolValidator(), this);
+			getServer().getPluginManager().registerEvents(new CaptchaValidator(), this);
+			getServer().getPluginManager().registerEvents(new LoginInterval(), this);
+		} catch (Exception e) {
+			throw new RuntimeException("Error when enabling", e);
+		}
 	}
 
 }

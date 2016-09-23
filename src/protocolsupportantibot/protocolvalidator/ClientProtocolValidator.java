@@ -23,6 +23,7 @@ import protocolsupportantibot.ProtocolSupportAntiBot;
 import protocolsupportantibot.Settings;
 import protocolsupportantibot.utils.AbortableCountDownLatch.AbortedException;
 import protocolsupportantibot.utils.Packets;
+import protocolsupportantibot.utils.ProtocolLibPacketSender;
 
 /*
  * Attempts to filter bots that don't implement some request->response minecraft client mechanic
@@ -80,7 +81,7 @@ public class ClientProtocolValidator implements Listener {
 
 		ValidatorInfo playervalidator = validators.get(event.getAddress());
 
-		ProtocolLibrary.getProtocolManager().sendServerPacket(playervalidator.player, Packets.createTransactionPacket());
+		ProtocolLibPacketSender.sendServerPacket(playervalidator.player, Packets.createTransactionPacket());
 		playervalidator.player.sendMessage(Settings.protocolValidatorStartMessage);
 
 		try {
