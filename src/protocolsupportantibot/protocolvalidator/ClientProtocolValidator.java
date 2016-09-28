@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -75,7 +76,8 @@ public class ClientProtocolValidator implements Listener {
 
 	@EventHandler(priority = EventPriority.LOW)
 	public void onFinishLogin(PlayerLoginFinishEvent event) throws InterruptedException, ExecutionException, InvocationTargetException {
-		if (event.isLoginDenied()) {
+		if (event.isLoginDenied() || !Settings.protocolValidatorEnabled || Bukkit.getOfflinePlayer(event.getUUID()).hasPlayedBefore()) {
+			validators.remove(event.getAddress());
 			return;
 		}
 

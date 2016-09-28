@@ -11,6 +11,7 @@ public class Settings {
 	public static int loginInterval = 50;
 	public static String loginIntervalMessage = ChatColor.AQUA + "Your connection is currently queued. Please wait for your turn. There are {PLAYERS} players before you in a queue.";
 
+	public static boolean protocolValidatorEnabled = true;
 	public static int protocolValidatorMaxWait = 10;
 	public static String protocolValidatorStartMessage = ChatColor.AQUA + "Basic antibot check in progress, please wait";
 	public static String protocolValidatorSuccessMessage = ChatColor.AQUA + "Basic bot check success";
@@ -31,6 +32,7 @@ public class Settings {
 	public static void load() {
 		YamlConfiguration config = YamlConfiguration.loadConfiguration(getMainConfigFile());
 		loginInterval = config.getInt("logininterval", loginInterval);
+		protocolValidatorEnabled = config.getBoolean("protocolvalidator.enabled", protocolValidatorEnabled);
 		protocolValidatorMaxWait = config.getInt("protocolvalidator.maxwait", protocolValidatorMaxWait);
 		captchaEnabled = config.getBoolean("captcha.enabled", captchaEnabled);
 		captchaMaxWait = config.getInt("captcha.maxwait", captchaMaxWait);
@@ -53,6 +55,7 @@ public class Settings {
 	private static void save() {
 		YamlConfiguration config = new YamlConfiguration();
 		config.set("logininterval", loginInterval);
+		config.set("protocolvalidator.enabled", protocolValidatorEnabled);
 		config.set("protocolvalidator.maxwait", protocolValidatorMaxWait);
 		config.set("captcha.enabled", captchaEnabled);
 		config.set("captcha.maxwait", captchaMaxWait);
