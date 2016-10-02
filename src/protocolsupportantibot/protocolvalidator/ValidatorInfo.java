@@ -13,11 +13,10 @@ final class ValidatorInfo {
 		this.player = player;
 	}
 
-	private final AbortableCountDownLatch confirmations = new AbortableCountDownLatch(3);
+	private final AbortableCountDownLatch confirmations = new AbortableCountDownLatch(2);
 
 	private boolean settings = false;
 	private boolean transaction = false;
-	private boolean teleport = false;
 
 	public void confirmSettings() {
 		if (!settings) {
@@ -29,13 +28,6 @@ final class ValidatorInfo {
 	public void confirmTransaction() {
 		if (!transaction) {
 			transaction = true;
-			confirmations.countDown();
-		}
-	}
-
-	public void confirmTeleport() {
-		if (!teleport) {
-			teleport = true;
 			confirmations.countDown();
 		}
 	}

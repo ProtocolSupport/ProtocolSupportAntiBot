@@ -51,7 +51,7 @@ public class ClientProtocolValidator implements Listener {
 		ProtocolLibrary.getProtocolManager().addPacketListener(
 			new PacketAdapter(
 				new AdapterParameteters().plugin(ProtocolSupportAntiBot.getInstance())
-				.types(PacketType.Play.Client.SETTINGS, PacketType.Play.Client.TRANSACTION, PacketType.Play.Client.TELEPORT_ACCEPT)
+				.types(PacketType.Play.Client.SETTINGS, PacketType.Play.Client.TRANSACTION)
 			) {
 				@Override
 				public void onPacketReceiving(PacketEvent event) {
@@ -62,9 +62,7 @@ public class ClientProtocolValidator implements Listener {
 					}
 
 					PacketType type = event.getPacketType();
-					if (type == PacketType.Play.Client.TELEPORT_ACCEPT) {
-						validator.confirmTeleport();
-					} else if (type == PacketType.Play.Client.SETTINGS) {
+					if (type == PacketType.Play.Client.SETTINGS) {
 						validator.confirmSettings();
 					} else if (type == PacketType.Play.Client.TRANSACTION) {
 						validator.confirmTransaction();
