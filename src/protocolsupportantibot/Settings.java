@@ -20,6 +20,7 @@ public class Settings {
 	public static boolean captchaEnabled = true;
 	public static int captchaMaxWait = 60;
 	public static int captchaMaxTries = 3;
+	public static int captchaColorId = 23;
 	public static String captchaStartMessage = ChatColor.AQUA + "Please write a number you see on the map to chat";
 	public static String captchaSuccessMessage = ChatColor.AQUA + "Your captca code is valid";
 	public static String captchaFailMessage = ChatColor.RED + "You didn't solve captcha in time, your address is temportally banned, please try joining again later";
@@ -37,6 +38,7 @@ public class Settings {
 		captchaEnabled = config.getBoolean("captcha.enabled", captchaEnabled);
 		captchaMaxWait = config.getInt("captcha.maxwait", captchaMaxWait);
 		captchaMaxTries = config.getInt("captcha.maxtries", captchaMaxTries);
+		captchaColorId = config.getInt("captcha.colorid", captchaColorId);
 		tempBanTime = config.getLong("tempban.time", tempBanTime);
 		YamlConfiguration messages = YamlConfiguration.loadConfiguration(getMessagesConfigFile());
 		loginIntervalMessage = messages.getString("logininterval.start", loginIntervalMessage);
@@ -60,6 +62,7 @@ public class Settings {
 		config.set("captcha.enabled", captchaEnabled);
 		config.set("captcha.maxwait", captchaMaxWait);
 		config.set("captcha.maxtries", captchaMaxTries);
+		config.set("captcha.colorid", captchaColorId);
 		config.set("tempban.time", tempBanTime);
 		YamlConfiguration messages = new YamlConfiguration();
 		messages.set("logininterval.start", loginIntervalMessage);

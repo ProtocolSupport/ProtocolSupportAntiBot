@@ -1,6 +1,5 @@
 package protocolsupportantibot.captcha;
 
-import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.util.Map;
@@ -21,8 +20,6 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketAdapter.AdapterParameteters;
 import com.comphenix.protocol.events.PacketEvent;
-import com.github.cage.Cage;
-import com.github.cage.image.Painter;
 
 import protocolsupport.api.events.PlayerDisconnectEvent;
 import protocolsupport.api.events.PlayerLoginFinishEvent;
@@ -81,20 +78,6 @@ public class CaptchaValidator implements Listener {
 		});
 	}
 
-	private static BufferedImage generateCaptchaImage(String val) {
-		return new Cage(new Painter(128, 128, null, null, null, null), null, null, null, Cage.DEFAULT_COMPRESS_RATIO, null, null).drawImage(val);
-	}
-
-	private static byte[] toMinecraftMapData(BufferedImage image) {
-		byte[] data = new byte[128 * 128];
-		for (int x = 0; x < image.getWidth() && x < 128; x++) {
-			for (int y = 0; y < image.getHeight() && y < 128; y++) {
-				data[y * 128 + x] = MinecraftMapColor.byRgb(image.getRGB(x, y)).getMapDataId();
-			}
-		}
-		return data;
-	}
-
 	@EventHandler(priority = EventPriority.LOW)
 	public void onFinishLogin(PlayerLoginFinishEvent event) throws InterruptedException, ExecutionException, InvocationTargetException {
 		if (event.isLoginDenied() || !Settings.captchaEnabled || Bukkit.getOfflinePlayer(event.getUUID()).hasPlayedBefore()) {
@@ -104,7 +87,7 @@ public class CaptchaValidator implements Listener {
 
 		ValidatorInfo info = validators.get(event.getAddress());
 
-		byte[] mapdata = toMinecraftMapData(generateCaptchaImage(info.generateCaptcha()));
+		byte[] mapdata = MapCaptchaPainter.create(info.generateCaptcha());
 
 		ProtocolLibrary.getProtocolManager().sendServerPacket(info.player, Packets.createSetSlotPacket(36, new ItemStack(Material.MAP, 1, (short) 1)), false);
 		ProtocolLibrary.getProtocolManager().sendServerPacket(info.player, Packets.createMapDataPacket(1, mapdata), false);
