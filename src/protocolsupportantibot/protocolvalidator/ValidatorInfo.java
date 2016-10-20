@@ -2,16 +2,9 @@ package protocolsupportantibot.protocolvalidator;
 
 import java.util.concurrent.TimeUnit;
 
-import org.bukkit.entity.Player;
-
 import protocolsupportantibot.utils.AbortableCountDownLatch;
 
 final class ValidatorInfo {
-
-	final Player player;
-	public ValidatorInfo(Player player) {
-		this.player = player;
-	}
 
 	private final AbortableCountDownLatch confirmations = new AbortableCountDownLatch(2);
 

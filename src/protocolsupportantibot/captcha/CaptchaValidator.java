@@ -1,29 +1,25 @@
 package protocolsupportantibot.captcha;
 
 import java.lang.reflect.InvocationTargetException;
-import java.net.InetSocketAddress;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 
 import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketAdapter.AdapterParameteters;
-import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.events.PacketContainer;
 
-import protocolsupport.api.events.PlayerDisconnectEvent;
+import protocolsupport.api.Connection;
+import protocolsupport.api.Connection.PacketReceiveListener;
+import protocolsupport.api.ProtocolSupportAPI;
+import protocolsupport.api.events.ConnectionCloseEvent;
+import protocolsupport.api.events.ConnectionOpenEvent;
 import protocolsupport.api.events.PlayerLoginFinishEvent;
-import protocolsupportantibot.ProtocolSupportAntiBot;
 import protocolsupportantibot.Settings;
 import protocolsupportantibot.bans.BanDataSource;
 import protocolsupportantibot.utils.AbortableCountDownLatch.AbortedException;
@@ -34,87 +30,84 @@ import protocolsupportantibot.utils.Packets;
  */
 public class CaptchaValidator implements Listener {
 
-	protected final Map<InetSocketAddress, ValidatorInfo> validators = new ConcurrentHashMap<>();
+	private static final String validator_info_key = "pasb_captcha_validator_info_key";
+	private static final String validator_listener_key = "pasb_captcha_validator_listener_key";
 
-	public CaptchaValidator() {
-		//player ref init
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(
-			new AdapterParameteters().plugin(ProtocolSupportAntiBot.getInstance()).types(PacketType.Login.Server.SUCCESS)
-		) {
-			@Override
-			public void onPacketSending(PacketEvent event) {
-				validators.put(event.getPlayer().getAddress(), new ValidatorInfo(event.getPlayer()));
-			}
-		});
-		//checker
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(
-			new AdapterParameteters().plugin(ProtocolSupportAntiBot.getInstance()).types(PacketType.Play.Client.CHAT)
-		) {
-			@Override
-			public void onPacketReceiving(PacketEvent event) {
-				Player player = event.getPlayer();
-
-				ValidatorInfo info = validators.get(player.getAddress());
-
-				if (info == null) {
-					return;
-				}
-
-				String message = event.getPacket().getStrings().read(0);
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onConnectionOpen(ConnectionOpenEvent event) {
+		final Connection connection = event.getConnection();
+		final ValidatorInfo validator = new ValidatorInfo();
+		PacketReceiveListener listener = packetObj -> {
+			PacketContainer container = PacketContainer.fromPacket(packetObj);
+			if (container.getType() == PacketType.Play.Client.CHAT) {
+				String message = container.getStrings().read(0);
 				if (message.startsWith("/")) {
 					message = message.substring(1);
 				}
 
-				if (info.checkCaptcha(message)) {
-					info.succces();
+				if (validator.checkCaptcha(message)) {
+					validator.succces();
 				} else {
-					if (info.getTries() >= Settings.captchaMaxTries) {
-						info.fail();
+					if (validator.getTries() >= Settings.captchaMaxTries) {
+						validator.fail();
 					} else {
-						player.sendMessage(Settings.captchaFailTryMessage);
+						connection.sendPacket(Packets.createChatPacket(Settings.captchaFailTryMessage));
 					}
 				}
 			}
-		});
+			return true;
+		};
+		connection.addMetadata(validator_info_key, validator);
+		connection.addMetadata(validator_listener_key, listener);
+		connection.addPacketReceiveListener(listener);
 	}
 
 	@EventHandler(priority = EventPriority.LOW)
 	public void onFinishLogin(PlayerLoginFinishEvent event) throws InterruptedException, ExecutionException, InvocationTargetException {
+		Connection connection = ProtocolSupportAPI.getConnection(event.getAddress());
+
 		if (event.isLoginDenied() || !Settings.captchaEnabled || Bukkit.getOfflinePlayer(event.getUUID()).hasPlayedBefore()) {
-			validators.remove(event.getAddress());
+			cleanupConnection(connection);
 			return;
 		}
 
-		ValidatorInfo info = validators.get(event.getAddress());
+		ValidatorInfo validator = (ValidatorInfo) connection.getMetadata(validator_info_key);
 
-		byte[] mapdata = MapCaptchaPainter.create(info.generateCaptcha());
+		byte[] mapdata = MapCaptchaPainter.create(validator.generateCaptcha());
 
-		ProtocolLibrary.getProtocolManager().sendServerPacket(info.player, Packets.createSetSlotPacket(36, new ItemStack(Material.MAP, 1, (short) 1)), false);
-		ProtocolLibrary.getProtocolManager().sendServerPacket(info.player, Packets.createMapDataPacket(1, mapdata), false);
+		connection.sendPacket(Packets.createSetSlotPacket(36, new ItemStack(Material.MAP, 1, (short) 1)));
+		connection.sendPacket(Packets.createMapDataPacket(1, mapdata));
 
-		info.player.sendMessage(Settings.captchaStartMessage);
+		connection.sendPacket(Packets.createChatPacket(Settings.captchaStartMessage));
 
 		try {
-			if (!info.waitConfirm(Settings.captchaMaxWait, TimeUnit.SECONDS)) {
+			if (!validator.waitConfirm(Settings.captchaMaxWait, TimeUnit.SECONDS)) {
 				BanDataSource.getInstance().ban(event.getAddress().getAddress());
 				event.denyLogin(Settings.captchaFailMessage);
 			} else {
-				if (info.isSuccess()) {
-					info.player.sendMessage(Settings.captchaSuccessMessage);
+				if (validator.isSuccess()) {
+					connection.sendPacket(Packets.createChatPacket(Settings.captchaSuccessMessage));
 				} else {
 					BanDataSource.getInstance().ban(event.getAddress().getAddress());
 					event.denyLogin(Settings.captchaFailTryBanMessage.replace("{MAXTRIES}", String.valueOf(Settings.captchaMaxTries)));
 				}
 			}
+			cleanupConnection(connection);
 		} catch (AbortedException e) {
 		}
+	}
 
-		validators.remove(event.getAddress());
+	private void cleanupConnection(Connection connection) {
+		connection.removeMetadata(validator_info_key);
+		PacketReceiveListener listener = (PacketReceiveListener) connection.removeMetadata(validator_listener_key);
+		if (listener != null) {
+			connection.removePacketReceiveListener(listener);
+		}
 	}
 
 	@EventHandler
-	public void onDisconnect(PlayerDisconnectEvent event) {
-		ValidatorInfo info = validators.remove(event.getAddress());
+	public void onDisconnect(ConnectionCloseEvent event) {
+		ValidatorInfo info = (ValidatorInfo) event.getConnection().removeMetadata(validator_info_key);
 		if (info != null) {
 			info.interrupt();
 		}

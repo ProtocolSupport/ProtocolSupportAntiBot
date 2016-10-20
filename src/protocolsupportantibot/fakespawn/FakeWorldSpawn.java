@@ -2,11 +2,9 @@ package protocolsupportantibot.fakespawn;
 
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
 import org.bukkit.WorldType;
@@ -21,21 +19,20 @@ import org.bukkit.event.player.PlayerLoginEvent.Result;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketAdapter.AdapterParameteters;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.EnumWrappers.Difficulty;
 import com.comphenix.protocol.wrappers.EnumWrappers.NativeGameMode;
 
 import net.minecraft.server.v1_10_R1.EntityPlayer;
-import protocolsupport.api.events.PlayerDisconnectEvent;
+import protocolsupport.api.Connection;
+import protocolsupport.api.Connection.PacketReceiveListener;
+import protocolsupport.api.Connection.PacketSendListener;
+import protocolsupport.api.ProtocolSupportAPI;
+import protocolsupport.api.events.ConnectionCloseEvent;
+import protocolsupport.api.events.ConnectionOpenEvent;
 import protocolsupport.api.events.PlayerLoginFinishEvent;
-import protocolsupportantibot.ProtocolSupportAntiBot;
 import protocolsupportantibot.protocolvalidator.EntityIdPool;
 import protocolsupportantibot.utils.Packets;
-import protocolsupportantibot.utils.ProtocolLibPacketSender;
 
 /*
  * Spawns player in fake client side only world
@@ -43,59 +40,49 @@ import protocolsupportantibot.utils.ProtocolLibPacketSender;
 public class FakeWorldSpawn implements Listener {
 
 	protected final Map<InetAddress, Integer> playerRealId = Collections.synchronizedMap(new IdentityHashMap<>());
-	protected final Map<InetSocketAddress, PacketContainer> playerSettings = new ConcurrentHashMap<>();
-	protected final Map<InetSocketAddress, Player> players = new ConcurrentHashMap<>();
 
 	protected final EntityIdPool idPool = new EntityIdPool();
 
 	public FakeWorldSpawn() {
 		idPool.claimPool();
-
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(
-			new AdapterParameteters().plugin(ProtocolSupportAntiBot.getInstance()).types(PacketType.Login.Server.SUCCESS)
-		) {
-			@Override
-			public void onPacketSending(PacketEvent event) {
-				players.put(event.getPlayer().getAddress(), event.getPlayer());
-			}
-		});
-
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(
-			new AdapterParameteters().plugin(ProtocolSupportAntiBot.getInstance()).types(PacketType.Play.Client.SETTINGS)
-		) {
-			@Override
-			public void onPacketReceiving(PacketEvent event) {
-				playerSettings.put(event.getPlayer().getAddress(), event.getPacket());
-			}
-		});
-
-		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(
-				new AdapterParameteters().plugin(ProtocolSupportAntiBot.getInstance()).types(PacketType.Play.Server.LOGIN)
-			) {
-				@Override
-				public void onPacketSending(PacketEvent event) {
-					event.setCancelled(true);
-
-					int realDimId = event.getPacket().getIntegers().read(1);
-					Difficulty realDiff = event.getPacket().getDifficulties().read(0);
-					WorldType realWType = event.getPacket().getWorldTypeModifier().read(0);
-					NativeGameMode realGameMode = event.getPacket().getGameModes().read(0);
-
-					try {
-						ProtocolLibPacketSender.sendServerPacket(
-							event.getPlayer(), Packets.createRespawnPacket(realDimId == 0 ? -1 : 0, realDiff, realWType, realGameMode)
-						);
-						ProtocolLibPacketSender.sendServerPacket(
-							event.getPlayer(), Packets.createRespawnPacket(realDimId, realDiff, realWType, realGameMode)
-						);
-					} catch (InvocationTargetException e) {
-						e.printStackTrace();
-					}
-				}
-			}
-		);
 	}
 
+	private static final String settings_packet_key = "psab_settings_packet_key";
+
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onConnectionOpen(ConnectionOpenEvent event) {
+		final Connection connection = event.getConnection();
+		connection.addPacketReceiveListener(new PacketReceiveListener() {
+			@Override
+			public boolean onPacketReceiving(Object packetObj) {
+				PacketContainer container = PacketContainer.fromPacket(packetObj);
+				if (container.getType() == PacketType.Play.Client.SETTINGS) {
+					connection.addMetadata(settings_packet_key, packetObj);
+					connection.removePacketReceiveListener(this);
+				};
+				return true;
+			}
+		});
+		connection.addPacketSendListener(new PacketSendListener() {
+			@Override
+			public boolean onPacketSending(Object packetObj) {
+				PacketContainer container = PacketContainer.fromPacket(packetObj);
+				if (container.getType() == PacketType.Play.Server.LOGIN) {
+					int realDimId = container.getIntegers().read(1);
+					Difficulty realDiff = container.getDifficulties().read(0);
+					WorldType realWType = container.getWorldTypeModifier().read(0);
+					NativeGameMode realGameMode = container.getGameModes().read(0);
+					connection.sendPacket(Packets.createRespawnPacket(realDimId == 0 ? -1 : 0, realDiff, realWType, realGameMode));
+					connection.sendPacket(Packets.createRespawnPacket(realDimId, realDiff, realWType, realGameMode));
+					connection.removePacketSendListener(this);
+					return false;
+				}
+				return true;
+			}
+		});
+	}
+
+	//replace entity id with real one
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerLoginEvent(PlayerLoginEvent event) {
 		Integer realId = playerRealId.remove(event.getAddress());
@@ -108,45 +95,41 @@ public class FakeWorldSpawn implements Listener {
 		entityplayer.h(realId);
 	}
 
+	//receive cached client settings on real join
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerJoin(PlayerJoinEvent event) throws IllegalAccessException, InvocationTargetException {
-		PacketContainer container = playerSettings.remove(event.getPlayer().getAddress());
-		if (container != null) {
-			ProtocolLibrary.getProtocolManager().recieveClientPacket(event.getPlayer(), container);
+		Connection connection = ProtocolSupportAPI.getConnection(event.getPlayer());
+		Object packet = connection.removeMetadata(settings_packet_key);
+		if (packet != null) {
+			connection.receivePacket(packet);
 		}
 	}
 
-	@EventHandler(priority = EventPriority.MONITOR)
-	public void onQuit(PlayerQuitEvent event) {
-		idPool.returnId(event.getPlayer().getEntityId());
-	}
-
+	//spawn player in a fake world
 	@EventHandler(priority = EventPriority.LOW)
 	public void onFinishLogin(PlayerLoginFinishEvent event) throws InterruptedException, ExecutionException, InvocationTargetException {
 		if (event.isLoginDenied()) {
 			return;
 		}
 
-		Player player = players.get(event.getAddress());
-		if (player == null) {
-			return;
-		}
-
 		int playerId = idPool.getId();
 		playerRealId.put(event.getAddress().getAddress(), playerId);
 
-		ProtocolLibPacketSender.sendServerPacket(player, Packets.createJoinGamePacket(playerId, 60));
-		ProtocolLibPacketSender.sendServerPacket(player, LobbySchematic.chunkdata != null ? LobbySchematic.chunkdata : Packets.createEmptyChunkPacket());
-		ProtocolLibPacketSender.sendServerPacket(player, Packets.createTeleportPacket(8, LobbySchematic.chunkdata != null ? 6 : 1000, 8, 0, 33));
+		Connection connection = ProtocolSupportAPI.getConnection(event.getAddress());
+		connection.sendPacket(Packets.createJoinGamePacket(playerId, 60));
+		connection.sendPacket(LobbySchematic.chunkdata != null ? LobbySchematic.chunkdata.getHandle() : Packets.createEmptyChunkPacket());
+		connection.sendPacket(Packets.createTeleportPacket(8, LobbySchematic.chunkdata != null ? 6 : 1000, 8, 0, 33));
+	}
 
-		players.remove(event.getAddress());
+
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void onQuit(PlayerQuitEvent event) {
+		idPool.returnId(event.getPlayer().getEntityId());
 	}
 
 	@EventHandler
-	public void onDisconnect(PlayerDisconnectEvent event) {
-		players.remove(event.getAddress());
-		playerSettings.remove(event.getAddress());
-		Integer realId = playerRealId.remove(event.getAddress().getAddress());
+	public void onDisconnect(ConnectionCloseEvent event) {
+		Integer realId = playerRealId.remove(event.getConnection().getAddress().getAddress());
 		if (realId != null) {
 			idPool.returnId(realId);
 		}

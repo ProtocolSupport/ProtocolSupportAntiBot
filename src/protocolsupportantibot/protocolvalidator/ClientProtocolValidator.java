@@ -1,9 +1,6 @@
 package protocolsupportantibot.protocolvalidator;
 
 import java.lang.reflect.InvocationTargetException;
-import java.net.InetSocketAddress;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -13,18 +10,17 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 
 import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketAdapter.AdapterParameteters;
-import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.events.PacketContainer;
 
-import protocolsupport.api.events.PlayerDisconnectEvent;
+import protocolsupport.api.Connection;
+import protocolsupport.api.Connection.PacketReceiveListener;
+import protocolsupport.api.ProtocolSupportAPI;
+import protocolsupport.api.events.ConnectionCloseEvent;
+import protocolsupport.api.events.ConnectionOpenEvent;
 import protocolsupport.api.events.PlayerLoginFinishEvent;
-import protocolsupportantibot.ProtocolSupportAntiBot;
 import protocolsupportantibot.Settings;
 import protocolsupportantibot.utils.AbortableCountDownLatch.AbortedException;
 import protocolsupportantibot.utils.Packets;
-import protocolsupportantibot.utils.ProtocolLibPacketSender;
 
 /*
  * Attempts to filter bots that don't implement some request->response minecraft client mechanic
@@ -32,73 +28,64 @@ import protocolsupportantibot.utils.ProtocolLibPacketSender;
  */
 public class ClientProtocolValidator implements Listener {
 
-	protected final Map<InetSocketAddress, ValidatorInfo> validators = new ConcurrentHashMap<>();
+	private static final String validator_info_key = "pasb_protocol_validator_info_key";
+	private static final String validator_listener_key = "pasb_protocol_validator_listener_key";
 
-	public ClientProtocolValidator() {
-		ProtocolLibrary.getProtocolManager().addPacketListener(
-			new PacketAdapter(
-				new AdapterParameteters()
-				.plugin(ProtocolSupportAntiBot.getInstance())
-				.types(PacketType.Login.Server.SUCCESS)
-			) {
-				@Override
-				public void onPacketSending(PacketEvent event) {
-					validators.put(event.getPlayer().getAddress(), new ValidatorInfo(event.getPlayer()));
-				}
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onConnectionOpen(ConnectionOpenEvent event) {
+		final Connection connection = event.getConnection();
+		final ValidatorInfo validator = new ValidatorInfo();
+		PacketReceiveListener listener = packetObj -> {
+			PacketContainer container = PacketContainer.fromPacket(packetObj);
+			if (container.getType() == PacketType.Play.Client.SETTINGS) {
+				validator.confirmSettings();
+			} else if (container.getType() == PacketType.Play.Client.TRANSACTION) {
+				validator.confirmTransaction();
 			}
-		);
-
-		ProtocolLibrary.getProtocolManager().addPacketListener(
-			new PacketAdapter(
-				new AdapterParameteters().plugin(ProtocolSupportAntiBot.getInstance())
-				.types(PacketType.Play.Client.SETTINGS, PacketType.Play.Client.TRANSACTION)
-			) {
-				@Override
-				public void onPacketReceiving(PacketEvent event) {
-					ValidatorInfo validator = validators.get(event.getPlayer().getAddress());
-
-					if (validator == null) {
-						return;
-					}
-
-					PacketType type = event.getPacketType();
-					if (type == PacketType.Play.Client.SETTINGS) {
-						validator.confirmSettings();
-					} else if (type == PacketType.Play.Client.TRANSACTION) {
-						validator.confirmTransaction();
-					}
-				}
-			}
-		);
+			return true;
+		};
+		connection.addMetadata(validator_info_key, validator);
+		connection.addMetadata(validator_listener_key, listener);
+		connection.addPacketReceiveListener(listener);
 	}
 
 	@EventHandler(priority = EventPriority.LOW)
 	public void onFinishLogin(PlayerLoginFinishEvent event) throws InterruptedException, ExecutionException, InvocationTargetException {
+		Connection connection = ProtocolSupportAPI.getConnection(event.getAddress());
+
 		if (event.isLoginDenied() || !Settings.protocolValidatorEnabled || Bukkit.getOfflinePlayer(event.getUUID()).hasPlayedBefore()) {
-			validators.remove(event.getAddress());
+			cleanupConnection(connection);
 			return;
 		}
 
-		ValidatorInfo playervalidator = validators.get(event.getAddress());
+		ValidatorInfo validator = (ValidatorInfo) connection.getMetadata(validator_info_key);
 
-		ProtocolLibPacketSender.sendServerPacket(playervalidator.player, Packets.createTransactionPacket());
-		playervalidator.player.sendMessage(Settings.protocolValidatorStartMessage);
+		connection.sendPacket(Packets.createTransactionPacket());
+
+		connection.sendPacket(Packets.createChatPacket(Settings.protocolValidatorStartMessage));
 
 		try {
-			if (!playervalidator.waitConfirm(Settings.protocolValidatorMaxWait, TimeUnit.SECONDS)) {
+			if (!validator.waitConfirm(Settings.protocolValidatorMaxWait, TimeUnit.SECONDS)) {
 				event.denyLogin(Settings.protocolValidatorFailMessage);
 			} else {
-				playervalidator.player.sendMessage(Settings.protocolValidatorSuccessMessage);
+				connection.sendPacket(Packets.createChatPacket(Settings.protocolValidatorSuccessMessage));
 			}
+			cleanupConnection(connection);
 		} catch (AbortedException e) {
 		}
+	}
 
-		validators.remove(event.getAddress());
+	private void cleanupConnection(Connection connection) {
+		connection.removeMetadata(validator_info_key);
+		PacketReceiveListener listener = (PacketReceiveListener) connection.removeMetadata(validator_listener_key);
+		if (listener != null) {
+			connection.removePacketReceiveListener(listener);
+		}
 	}
 
 	@EventHandler
-	public void onDisconnect(PlayerDisconnectEvent event) {
-		ValidatorInfo info = validators.remove(event.getAddress());
+	public void onDisconnect(ConnectionCloseEvent event) {
+		ValidatorInfo info = (ValidatorInfo) event.getConnection().removeMetadata(validator_info_key);
 		if (info != null) {
 			info.interrupt();
 		}

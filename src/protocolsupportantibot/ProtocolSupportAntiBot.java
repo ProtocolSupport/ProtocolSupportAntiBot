@@ -9,7 +9,6 @@ import protocolsupportantibot.fakespawn.FakeWorldSpawn;
 import protocolsupportantibot.fakespawn.LobbySchematic;
 import protocolsupportantibot.logininterval.LoginInterval;
 import protocolsupportantibot.protocolvalidator.ClientProtocolValidator;
-import protocolsupportantibot.utils.ProtocolLibPacketSender;
 
 public class ProtocolSupportAntiBot extends JavaPlugin implements Listener {
 
@@ -26,7 +25,6 @@ public class ProtocolSupportAntiBot extends JavaPlugin implements Listener {
 	@Override
 	public void onEnable() {
 		try {
-			ProtocolLibPacketSender.init();
 			Settings.load();
 			getCommand("protocolsupportantibot").setExecutor(new Commands());
 			saveResource(LobbySchematic.name, false);
