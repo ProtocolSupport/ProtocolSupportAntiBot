@@ -14,7 +14,6 @@ import com.comphenix.protocol.events.PacketContainer;
 
 import protocolsupport.api.Connection;
 import protocolsupport.api.Connection.PacketReceiveListener;
-import protocolsupport.api.ProtocolSupportAPI;
 import protocolsupport.api.events.ConnectionCloseEvent;
 import protocolsupport.api.events.ConnectionOpenEvent;
 import protocolsupport.api.events.PlayerLoginFinishEvent;
@@ -51,7 +50,7 @@ public class ClientProtocolValidator implements Listener {
 
 	@EventHandler(priority = EventPriority.LOW)
 	public void onFinishLogin(PlayerLoginFinishEvent event) throws InterruptedException, ExecutionException, InvocationTargetException {
-		Connection connection = ProtocolSupportAPI.getConnection(event.getAddress());
+		Connection connection = event.getConnection();
 
 		if (event.isLoginDenied() || !Settings.protocolValidatorEnabled || Bukkit.getOfflinePlayer(event.getUUID()).hasPlayedBefore()) {
 			cleanupConnection(connection);

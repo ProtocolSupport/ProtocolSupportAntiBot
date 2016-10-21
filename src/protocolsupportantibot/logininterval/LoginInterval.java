@@ -10,8 +10,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 
-import protocolsupport.api.Connection;
-import protocolsupport.api.ProtocolSupportAPI;
 import protocolsupport.api.events.PlayerDisconnectEvent;
 import protocolsupport.api.events.PlayerLoginFinishEvent;
 import protocolsupportantibot.ProtocolSupportAntiBot;
@@ -53,8 +51,7 @@ public class LoginInterval implements Listener {
 			return;
 		}
 
-		Connection connection = ProtocolSupportAPI.getConnection(event.getAddress());
-		connection.sendPacket(Packets.createChatPacket(Settings.loginIntervalMessage.replace("{PLAYERS}", String.valueOf(queue.size()))));
+		event.getConnection().sendPacket(Packets.createChatPacket(Settings.loginIntervalMessage.replace("{PLAYERS}", String.valueOf(queue.size()))));
 
 		CountDownLatch countdown = new CountDownLatch(1);
 		synchronized (lock) {

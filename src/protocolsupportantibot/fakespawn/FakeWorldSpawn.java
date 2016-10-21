@@ -115,7 +115,7 @@ public class FakeWorldSpawn implements Listener {
 		int playerId = idPool.getId();
 		playerRealId.put(event.getAddress().getAddress(), playerId);
 
-		Connection connection = ProtocolSupportAPI.getConnection(event.getAddress());
+		Connection connection = event.getConnection();
 		connection.sendPacket(Packets.createJoinGamePacket(playerId, 60));
 		connection.sendPacket(LobbySchematic.chunkdata != null ? LobbySchematic.chunkdata.getHandle() : Packets.createEmptyChunkPacket());
 		connection.sendPacket(Packets.createTeleportPacket(8, LobbySchematic.chunkdata != null ? 6 : 1000, 8, 0, 33));
