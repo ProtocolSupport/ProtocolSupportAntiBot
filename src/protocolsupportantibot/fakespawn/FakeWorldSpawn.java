@@ -1,10 +1,6 @@
 package protocolsupportantibot.fakespawn;
 
 import java.lang.reflect.InvocationTargetException;
-import java.net.InetAddress;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.bukkit.WorldType;
@@ -13,9 +9,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerLoginEvent;
-import org.bukkit.event.player.PlayerLoginEvent.Result;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import com.comphenix.protocol.PacketType;
@@ -27,10 +20,10 @@ import net.minecraft.server.v1_10_R1.EntityPlayer;
 import protocolsupport.api.Connection;
 import protocolsupport.api.Connection.PacketReceiveListener;
 import protocolsupport.api.Connection.PacketSendListener;
-import protocolsupport.api.ProtocolSupportAPI;
 import protocolsupport.api.events.ConnectionCloseEvent;
 import protocolsupport.api.events.ConnectionOpenEvent;
 import protocolsupport.api.events.PlayerLoginFinishEvent;
+import protocolsupport.api.events.PlayerSyncLoginEvent;
 import protocolsupportantibot.protocolvalidator.EntityIdPool;
 import protocolsupportantibot.utils.Packets;
 
@@ -39,8 +32,6 @@ import protocolsupportantibot.utils.Packets;
  */
 public class FakeWorldSpawn implements Listener {
 
-	protected final Map<InetAddress, Integer> playerRealId = Collections.synchronizedMap(new IdentityHashMap<>());
-
 	protected final EntityIdPool idPool = new EntityIdPool();
 
 	public FakeWorldSpawn() {
@@ -48,6 +39,7 @@ public class FakeWorldSpawn implements Listener {
 	}
 
 	private static final String settings_packet_key = "psab_settings_packet_key";
+	private static final String real_id_key = "pasb_real_id_key";
 
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onConnectionOpen(ConnectionOpenEvent event) {
@@ -82,23 +74,20 @@ public class FakeWorldSpawn implements Listener {
 		});
 	}
 
-	//replace entity id with real one
+	//replace entity id with real one and receive real client settings
 	@EventHandler(priority = EventPriority.LOWEST)
-	public void onPlayerLoginEvent(PlayerLoginEvent event) {
-		Integer realId = playerRealId.remove(event.getAddress());
+	public void onPlayerLoginEvent(PlayerSyncLoginEvent event) {
+		Connection connection = event.getConnection();
+
+		Integer realId = (Integer) event.getConnection().removeMetadata(real_id_key);
 		if (realId == null) {
-			event.disallow(Result.KICK_OTHER, "Internal error: failed to get real id");
+			event.denyLogin("Internal error: failed to get real id");
 			return;
 		}
 		Player player = event.getPlayer();
 		EntityPlayer entityplayer = ((CraftPlayer) player).getHandle();
 		entityplayer.h(realId);
-	}
 
-	//receive cached client settings on real join
-	@EventHandler(priority = EventPriority.LOWEST)
-	public void onPlayerJoin(PlayerJoinEvent event) throws IllegalAccessException, InvocationTargetException {
-		Connection connection = ProtocolSupportAPI.getConnection(event.getPlayer());
 		Object packet = connection.removeMetadata(settings_packet_key);
 		if (packet != null) {
 			connection.receivePacket(packet);
@@ -113,9 +102,11 @@ public class FakeWorldSpawn implements Listener {
 		}
 
 		int playerId = idPool.getId();
-		playerRealId.put(event.getAddress().getAddress(), playerId);
 
 		Connection connection = event.getConnection();
+
+		connection.addMetadata(real_id_key, playerId);
+
 		connection.sendPacket(Packets.createJoinGamePacket(playerId, 60));
 		connection.sendPacket(LobbySchematic.chunkdata != null ? LobbySchematic.chunkdata.getHandle() : Packets.createEmptyChunkPacket());
 		connection.sendPacket(Packets.createTeleportPacket(8, LobbySchematic.chunkdata != null ? 6 : 1000, 8, 0, 33));
@@ -129,7 +120,7 @@ public class FakeWorldSpawn implements Listener {
 
 	@EventHandler
 	public void onDisconnect(ConnectionCloseEvent event) {
-		Integer realId = playerRealId.remove(event.getConnection().getAddress().getAddress());
+		Integer realId = (Integer) event.getConnection().removeMetadata(real_id_key);
 		if (realId != null) {
 			idPool.returnId(realId);
 		}
