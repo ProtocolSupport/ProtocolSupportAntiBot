@@ -59,6 +59,10 @@ public class ClientProtocolValidator implements Listener {
 
 		ValidatorInfo validator = (ValidatorInfo) connection.getMetadata(validator_info_key);
 
+		if (validator == null) {
+			return;
+		}
+
 		connection.sendPacket(Packets.createTransactionPacket());
 
 		connection.sendPacket(Packets.createChatPacket(Settings.protocolValidatorStartMessage));

@@ -73,6 +73,10 @@ public class CaptchaValidator implements Listener {
 
 		ValidatorInfo validator = (ValidatorInfo) connection.getMetadata(validator_info_key);
 
+		if (validator == null) {
+			return;
+		}
+
 		byte[] mapdata = MapCaptchaPainter.create(validator.generateCaptcha());
 
 		connection.sendPacket(Packets.createSetSlotPacket(36, new ItemStack(Material.MAP, 1, (short) 1)));
