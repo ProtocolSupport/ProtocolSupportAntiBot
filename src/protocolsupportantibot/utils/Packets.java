@@ -14,7 +14,7 @@ import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.EnumWrappers.Difficulty;
 import com.comphenix.protocol.wrappers.EnumWrappers.NativeGameMode;
 
-import net.minecraft.server.v1_10_R1.MapIcon;
+import net.minecraft.server.v1_11_R1.MapIcon;
 
 public class Packets {
 

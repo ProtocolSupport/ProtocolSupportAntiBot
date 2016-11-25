@@ -3,11 +3,11 @@ package protocolsupportantibot.protocolvalidator;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 
-import org.bukkit.craftbukkit.v1_10_R1.util.Waitable;
+import org.bukkit.craftbukkit.v1_11_R1.util.Waitable;
 
-import net.minecraft.server.v1_10_R1.Entity;
-import net.minecraft.server.v1_10_R1.MinecraftServer;
-import net.minecraft.server.v1_10_R1.NBTTagCompound;
+import net.minecraft.server.v1_11_R1.Entity;
+import net.minecraft.server.v1_11_R1.MinecraftServer;
+import net.minecraft.server.v1_11_R1.NBTTagCompound;
 
 public class EntityIdPool {
 
