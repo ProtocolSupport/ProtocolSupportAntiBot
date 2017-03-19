@@ -19,7 +19,6 @@ import net.minecraft.server.v1_11_R1.ChunkSection;
 import net.minecraft.server.v1_11_R1.IBlockData;
 import net.minecraft.server.v1_11_R1.PacketDataSerializer;
 import net.minecraft.server.v1_11_R1.PacketPlayOutMapChunk;
-import protocolsupport.protocol.serializer.ProtocolSupportPacketDataSerializer;
 import protocolsupportantibot.ProtocolSupportAntiBot;
 
 @SuppressWarnings("deprecation")
@@ -56,7 +55,9 @@ public class LobbySchematic {
 			chunkdata.getBooleans().write(0, true);
 			ByteBuf buffer = Unpooled.buffer();
 			chunkdata.getIntegers().write(2, mapchunk.a(new PacketDataSerializer(buffer), chunk, true, 65535));
-			chunkdata.getByteArrays().write(0, ProtocolSupportPacketDataSerializer.toArray(buffer));
+			byte[] bufferdata = new byte[buffer.readableBytes()];
+			buffer.readBytes(bufferdata);
+			chunkdata.getByteArrays().write(0, bufferdata);
 			chunkdata.getSpecificModifier(List.class).write(0, Collections.emptyList());
 		} catch (DataException | IOException e) {
 		}
