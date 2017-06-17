@@ -4,7 +4,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.ExecutionException;
 
 import org.bukkit.WorldType;
-import org.bukkit.craftbukkit.v1_11_R1.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_12_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -16,7 +16,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.EnumWrappers.Difficulty;
 import com.comphenix.protocol.wrappers.EnumWrappers.NativeGameMode;
 
-import net.minecraft.server.v1_11_R1.EntityPlayer;
+import net.minecraft.server.v1_12_R1.EntityPlayer;
 import protocolsupport.api.Connection;
 import protocolsupport.api.Connection.PacketReceiveListener;
 import protocolsupport.api.Connection.PacketSendListener;

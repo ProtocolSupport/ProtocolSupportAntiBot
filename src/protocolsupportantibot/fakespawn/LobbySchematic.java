@@ -13,12 +13,12 @@ import com.sk89q.worldedit.world.DataException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import net.minecraft.server.v1_11_R1.Block;
-import net.minecraft.server.v1_11_R1.Chunk;
-import net.minecraft.server.v1_11_R1.ChunkSection;
-import net.minecraft.server.v1_11_R1.IBlockData;
-import net.minecraft.server.v1_11_R1.PacketDataSerializer;
-import net.minecraft.server.v1_11_R1.PacketPlayOutMapChunk;
+import net.minecraft.server.v1_12_R1.Block;
+import net.minecraft.server.v1_12_R1.Chunk;
+import net.minecraft.server.v1_12_R1.ChunkSection;
+import net.minecraft.server.v1_12_R1.IBlockData;
+import net.minecraft.server.v1_12_R1.PacketDataSerializer;
+import net.minecraft.server.v1_12_R1.PacketPlayOutMapChunk;
 import protocolsupportantibot.ProtocolSupportAntiBot;
 
 @SuppressWarnings("deprecation")

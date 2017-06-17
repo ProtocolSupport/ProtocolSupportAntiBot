@@ -13,9 +13,9 @@
 	<target name="build">
 		<mkdir dir="${classes.dir}" />
 		<mkdir dir="${libs.dir}" />
-		<get src="http://download.true-games.org/minecraft/libs/ProtocolSupport/spigot.jar" dest="${libs.dir}/spigot.jar" usetimestamp="true" />
+		<get src="https://yivesmirror.com/files/spigot/spigot-1.12-R0.1-SNAPSHOT-b1299.jar" dest="${libs.dir}/spigot.jar" usetimestamp="true" />
 		<get src="http://builds.enginehub.org/job/worldedit/9404/download/worldedit-bukkit-6.1.5-SNAPSHOT-dist.jar" dest="${libs.dir}/worldedit.jar" usetimestamp="true" />
-		<get src="http://dmulloy2.net/backups/ProtocolLib-4.1.0.jar" dest="${libs.dir}/ProtocolLib.jar" usetimestamp="true" />
+		<get src="http://ci.dmulloy2.net/job/ProtocolLib/lastSuccessfulBuild/artifact/modules/ProtocolLib/target/ProtocolLib.jar" dest="${libs.dir}/ProtocolLib.jar" usetimestamp="true" />
 		<get src="http://build.true-games.org/job/ProtocolSupport/lastSuccessfulBuild/artifact/target/ProtocolSupport.jar" dest="${libs.dir}/ProtocolSupport.jar" usetimestamp="true" />
 		<javac source="1.8" target="1.8" encoding="UTF-8" srcdir="${src.dir}" destdir="${classes.dir}" classpathref="libs" debug="on" />
 		<jar destfile="${target.dir}/ProtocolSupportAntiBot.jar" basedir="${classes.dir}">
